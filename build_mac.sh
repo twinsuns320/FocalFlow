@@ -18,8 +18,11 @@ $PYTHON -m pip install --upgrade nuitka ordered-set zstandard \
     pyinstaller PyQt6 opencv-python-headless numpy pillow >> "$LOG" 2>&1
 
 echo "Cleaning old build artifacts..."
-rm -rf "$SCRIPT_DIR/dist" "$SCRIPT_DIR/build" "$SCRIPT_DIR/dist_upgrade" "$SCRIPT_DIR/build_upgrade" \
-       "$SCRIPT_DIR/compiled_license" "$SCRIPT_DIR"/*.spec "$SCRIPT_DIR"/*.so
+rm -rf "$SCRIPT_DIR/dist" "$SCRIPT_DIR/build" \
+       "$SCRIPT_DIR/dist_upgrade" "$SCRIPT_DIR/build_upgrade" \
+       "$SCRIPT_DIR/dist_install" "$SCRIPT_DIR/build_install" \
+       "$SCRIPT_DIR/compiled_license" "$SCRIPT_DIR/stage" "$SCRIPT_DIR/stage_upgrade" \
+       "$SCRIPT_DIR"/*.spec "$SCRIPT_DIR"/*.so
 
 echo "Compiling license.py to a native extension with Nuitka..."
 $PYTHON -m nuitka \
@@ -30,7 +33,7 @@ $PYTHON -m nuitka \
 
 echo "[OK] license.py compiled. Output: $SCRIPT_DIR/compiled_license" | tee -a "$LOG"
 
-echo "Staging build folder with compiled license module..."
+echo "Staging FocalFlow build folder with compiled license module..."
 STAGE="$SCRIPT_DIR/stage"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
@@ -40,52 +43,48 @@ cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE/"
 
 echo "Building FocalFlow.app (GUI plain, license.py compiled)..."
 $PYTHON -m PyInstaller \
+    --noconfirm \
     --windowed \
     --name FocalFlow \
     --distpath "$SCRIPT_DIR/dist" \
     --workpath "$SCRIPT_DIR/build" \
-    --add-binary "$STAGE/license*.so:." \
     "$STAGE/focalflow.py" >> "$LOG" 2>&1
 
 echo "[OK] FocalFlow build complete. Output: $SCRIPT_DIR/dist/FocalFlow.app" | tee -a "$LOG"
 
-echo "Staging upgrade_FocalFlow build..."
+echo "Staging upgrade_FocalFlow build folder..."
 STAGE_UP="$SCRIPT_DIR/stage_upgrade"
 rm -rf "$STAGE_UP"
 mkdir -p "$STAGE_UP"
 cp "$SCRIPT_DIR/upgrade_FocalFlow.py" "$STAGE_UP/"
 cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE_UP/"
 
-echo "Building upgrade_FocalFlow.app (license.py compiled)..."
+echo "Building upgrade_FocalFlow.app (double-clickable, console visible)..."
 $PYTHON -m PyInstaller \
-    --windowed \
+    --noconfirm \
+    --console \
     --name upgrade_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_upgrade" \
     --workpath "$SCRIPT_DIR/build_upgrade" \
-    --add-binary "$STAGE_UP/license*.so:." \
     "$STAGE_UP/upgrade_FocalFlow.py" >> "$LOG" 2>&1
 
 echo "[OK] Upgrade tool build complete. Output: $SCRIPT_DIR/dist_upgrade/upgrade_FocalFlow.app" | tee -a "$LOG"
 
+echo "Staging install_FocalFlow build folder..."
+STAGE_INST="$SCRIPT_DIR/stage_install"
+rm -rf "$STAGE_INST"
+mkdir -p "$STAGE_INST"
+cp "$SCRIPT_DIR/install_mac.py" "$STAGE_INST/"
+cp "$SCRIPT_DIR/focal_paths.py" "$STAGE_INST/"
+cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE_INST/"
+
 echo "Building install_FocalFlow.app (double-clickable installer)..."
 $PYTHON -m PyInstaller \
+    --noconfirm \
     --console \
     --name install_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_install" \
     --workpath "$SCRIPT_DIR/build_install" \
-    --add-binary "$STAGE/license*.so:." \
-    --hidden-import focal_paths \
-    "$SCRIPT_DIR/install_mac.py" >> "$LOG" 2>&1
+    "$STAGE_INST/install_mac.py" >> "$LOG" 2>&1
 
 echo "[OK] Installer build complete. Output: $SCRIPT_DIR/dist_install/install_FocalFlow.app" | tee -a "$LOG"
-
-echo "Building upgrade_FocalFlow.app (double-clickable upgrader)..."
-$PYTHON -m PyInstaller \
-    --console \
-    --name upgrade_FocalFlow \
-    --distpath "$SCRIPT_DIR/dist_upgrade" \
-    --workpath "$SCRIPT_DIR/build_upgrade" \
-    --add-binary "$STAGE/license*.so:." \
-    "$SCRIPT_DIR/upgrade_FocalFlow.py" >> "$LOG" 2>&1
-
-echo "[OK] Upgrade tool build complete. Output: $SCRIPT_DIR/dist_upgrade/upgrade_FocalFlow.app" | tee -a "$LOG"
