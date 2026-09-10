@@ -1,12 +1,12 @@
-
-
 import os
+import sys
 import json
-import base64
-import hmac
+import platform
+import subprocess
 import hashlib
+import hmac
 import base64
-import platform, subprocess
+
 
 def _deobfuscate(blob, xor_key=0x5A):
     raw = base64.b64decode(blob)
@@ -14,10 +14,10 @@ def _deobfuscate(blob, xor_key=0x5A):
 
 def _deobfuscate_bytes(blob, xor_key=0x5A):
     raw = base64.b64decode(blob)
-    return bytes(b ^ xor_key for b in raw) 
-
+    return bytes(b ^ xor_key for b in raw)
 
 _APP_SECRET = _deobfuscate_bytes("oiudLTvsSv71NilUQQF1rC3HfDveLOcO6DrHZoEFuuI=")
+
 TIER_TRIAL = 0
 TIER_FULL  = 1
 
@@ -25,15 +25,18 @@ FREE_TRIAL_KEY = "FreeTrial"
 
 GUMROAD_PRODUCT_ID = _deobfuscate("FT4uDCw+KBU+HxkRHQgJGQk2a2IYC2dn")
 
+_MASTER_HASH = _deobfuscate("a2hsOTxsPjxiaztvOWtqPm0/ODtuP25sbjs/Pm5pOT4/Ozlta2lpY2ljamM5Pzk8azs+bWo/bTtvbmM7bz5saQ==")
 
-_MASTER_HASH        = _deobfuscate("a2hsOTxsPjxiaztvOWtqPm0/ODtuP25sbjs/Pm5pOT4/Ozlta2lpY2ljamM5Pzk8azs+bWo/bTtvbmM7bz5saQ==")
+if platform.system() == "Darwin":
+    ACTIVATION_DIR = os.path.expanduser("~/Library/Application Support/FocalFlow")
+else:
+    ACTIVATION_DIR = os.path.join(os.environ.get("LOCALAPPDATA", "C:\\"), "FocalFlow")
+ACTIVATION_PATH = os.path.join(ACTIVATION_DIR, "state.dat")
 
-ACTIVATION_DIR  = os.path.join(os.environ.get("LOCALAPPDATA", "C:\\"), "FocalFlow")
-
-
-import platform, subprocess
 
 def _hardware_id():
+    """Stable per-machine ID that does not travel if this file is copied
+    to another PC."""
     if platform.system() == "Darwin":
         try:
             out = subprocess.run(
@@ -56,11 +59,6 @@ def _hardware_id():
     except Exception:
         return "no-machine-guid-" + (os.environ.get("COMPUTERNAME") or "unknown")
 
-if platform.system() == "Darwin":
-    ACTIVATION_DIR = os.path.expanduser("~/Library/Application Support/FocalFlow")
-else:
-    ACTIVATION_DIR = os.path.join(os.environ.get("LOCALAPPDATA", "C:\\"), "FocalFlow")
-ACTIVATION_PATH = os.path.join(ACTIVATION_DIR, "state.dat")
 
 def _sign(tier, hw_id, salt):
     msg = f"{tier}:{hw_id}:{salt}".encode()
@@ -68,8 +66,6 @@ def _sign(tier, hw_id, salt):
 
 
 def write_activation(tier):
-    """Writes (or overwrites) the local activation token for this machine.
-    Safe to call again later to upgrade trial -> full."""
     hw_id = _hardware_id()
     salt  = base64.b64encode(os.urandom(9)).decode()
     token = _sign(tier, hw_id, salt)
@@ -83,8 +79,6 @@ def write_activation(tier):
 
 
 def read_activation():
-    """Returns TIER_FULL, TIER_TRIAL, or None if missing/tampered/copied
-    from a different machine."""
     if not os.path.isfile(ACTIVATION_PATH):
         return None
     try:
@@ -101,14 +95,16 @@ def read_activation():
 
 
 def verify_gumroad_key(key):
-    """Returns (ok: bool, tier: int | None)."""
     import urllib.request
     import urllib.parse
     key = key.strip()
+
     if hashlib.sha256(key.encode()).hexdigest() == _MASTER_HASH:
         return True, TIER_FULL
+
     if key.lower() == FREE_TRIAL_KEY.lower():
         return True, TIER_TRIAL
+
     try:
         data = urllib.parse.urlencode({
             "product_id":           GUMROAD_PRODUCT_ID,
@@ -126,8 +122,7 @@ def verify_gumroad_key(key):
         if not result.get("success", False):
             return False, None
 
-        uses = result.get("uses", 0)
-        if uses > 1:
+        if result.get("uses", 0) > 1:
             return False, None
 
         return True, TIER_FULL
