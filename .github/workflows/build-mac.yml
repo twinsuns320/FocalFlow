@@ -77,3 +77,11 @@ jobs:
           chmod +x package/ffmpeg9arm package/ffmpeg80intel package/ffprobe9arm package/ffprobe80intel
           cd package
           zip -r -y ../FocalFlow-Mac-Package.zip .
+
+      - name: Upload complete package
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FocalFlow-Mac-Package
+          path: FocalFlow-Mac-Package.zip
+          retention-days: 14
