@@ -66,3 +66,26 @@ $PYTHON -m PyInstaller \
     "$STAGE_UP/upgrade_FocalFlow.py" >> "$LOG" 2>&1
 
 echo "[OK] Upgrade tool build complete. Output: $SCRIPT_DIR/dist_upgrade/upgrade_FocalFlow.app" | tee -a "$LOG"
+
+echo "Building install_FocalFlow.app (double-clickable installer)..."
+$PYTHON -m PyInstaller \
+    --console \
+    --name install_FocalFlow \
+    --distpath "$SCRIPT_DIR/dist_install" \
+    --workpath "$SCRIPT_DIR/build_install" \
+    --add-binary "$STAGE/license*.so:." \
+    --hidden-import focal_paths \
+    "$SCRIPT_DIR/install_mac.py" >> "$LOG" 2>&1
+
+echo "[OK] Installer build complete. Output: $SCRIPT_DIR/dist_install/install_FocalFlow.app" | tee -a "$LOG"
+
+echo "Building upgrade_FocalFlow.app (double-clickable upgrader)..."
+$PYTHON -m PyInstaller \
+    --console \
+    --name upgrade_FocalFlow \
+    --distpath "$SCRIPT_DIR/dist_upgrade" \
+    --workpath "$SCRIPT_DIR/build_upgrade" \
+    --add-binary "$STAGE/license*.so:." \
+    "$SCRIPT_DIR/upgrade_FocalFlow.py" >> "$LOG" 2>&1
+
+echo "[OK] Upgrade tool build complete. Output: $SCRIPT_DIR/dist_upgrade/upgrade_FocalFlow.app" | tee -a "$LOG"

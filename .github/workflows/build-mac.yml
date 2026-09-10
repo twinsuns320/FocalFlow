@@ -61,4 +61,19 @@ jobs:
         with:
           name: FocalFlow-mac-app
           path: dist/FocalFlow.app
+
+      - name: Upload install_FocalFlow.app
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-FocalFlow-mac-app
+          path: dist_install/install_FocalFlow.app
+          retention-days: 14
+
+      - name: Upload upgrade_FocalFlow.app
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upgrade-FocalFlow-mac-app
+          path: dist_upgrade/upgrade_FocalFlow.app
           retention-days: 14
