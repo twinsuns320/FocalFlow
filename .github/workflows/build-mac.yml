@@ -32,7 +32,7 @@ jobs:
       - name: Make build script executable
         run: chmod +x build_mac.sh
 
-      - name: Run Nuitka build
+      - name: Run build
         run: ./build_mac.sh
 
       - name: Smoke test — app launches without crashing
@@ -55,25 +55,28 @@ jobs:
             build_log.txt
             nuitka_report_focalflow.xml
 
-      - name: Upload FocalFlow.app
+      - name: Assemble final distributable package
         if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: FocalFlow-mac-app
-          path: dist/FocalFlow.app
+        run: |
+          mkdir -p package
+          cp -R dist/FocalFlow.app package/
+          cp -R dist_install/install_FocalFlow.app package/
+          cp -R dist_upgrade/upgrade_FocalFlow.app package/
+          cp splash_FocalFlow.py package/
+          cp launch_FocalFlow.py package/
+          cp place_result_FocalFlow.py package/
+          cp settings_FocalFlow.py package/
+          cp uninstall_FocalFlow.command package/
+          cp ffmpeg9arm ffmpeg80intel ffprobe9arm ffprobe80intel package/
+          cp python-3.13.13-macos11.pkg package/
+          cp README.txt package/
+          cd package
+          zip -r -y ../FocalFlow-Mac-Package.zip .
 
-      - name: Upload install_FocalFlow.app
+      - name: Upload complete package
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: install-FocalFlow-mac-app
-          path: dist_install/install_FocalFlow.app
-          retention-days: 14
-
-      - name: Upload upgrade_FocalFlow.app
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: upgrade-FocalFlow-mac-app
-          path: dist_upgrade/upgrade_FocalFlow.app
+          name: FocalFlow-Mac-Package
+          path: FocalFlow-Mac-Package.zip
           retention-days: 14
