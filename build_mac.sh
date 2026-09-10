@@ -17,12 +17,11 @@ echo "Installing Nuitka..."
 $PYTHON -m pip install --upgrade nuitka ordered-set zstandard >> "$LOG" 2>&1
 
 echo "Cleaning old build artifacts..."
-rm -rf "$SCRIPT_DIR/dist" "$SCRIPT_DIR/build" "$SCRIPT_DIR"/*.app
+rm -rf "$SCRIPT_DIR/dist" "$SCRIPT_DIR/dist_upgrade" "$SCRIPT_DIR/build" "$SCRIPT_DIR"/*.app
 
 echo "Building FocalFlow.app..."
 $PYTHON -m nuitka \
-    --mode=standalone \
-    --macos-create-app-bundle \
+    --mode=app \
     --enable-plugin=pyqt6 \
     --include-qt-plugins=platforms,imageformats,styles \
     --include-package=PIL \
@@ -36,7 +35,19 @@ $PYTHON -m nuitka \
     --report="$SCRIPT_DIR/nuitka_report_focalflow.xml" \
     --main="$SCRIPT_DIR/focalflow.py" >> "$LOG" 2>&1
 
-echo "[OK] Build complete. Output: $SCRIPT_DIR/dist/FocalFlow.app" | tee -a "$LOG"
+echo "[OK] FocalFlow build complete. Output: $SCRIPT_DIR/dist/FocalFlow.app" | tee -a "$LOG"
+
+echo "Building upgrade_FocalFlow.app..."
+$PYTHON -m nuitka \
+    --mode=app \
+    --assume-yes-for-downloads \
+    --show-progress \
+    --output-dir="$SCRIPT_DIR/dist_upgrade" \
+    --output-filename=upgrade_FocalFlow \
+    --report="$SCRIPT_DIR/nuitka_report_upgrade.xml" \
+    --main="$SCRIPT_DIR/upgrade_FocalFlow.py" >> "$LOG" 2>&1
+
+echo "[OK] Upgrade tool build complete. Output: $SCRIPT_DIR/dist_upgrade/upgrade_FocalFlow.app" | tee -a "$LOG"
 
 # Optional, once you have a Developer ID (add after $99 step):
 # --macos-sign-identity="Developer ID Application: Your Name (TEAMID)"
