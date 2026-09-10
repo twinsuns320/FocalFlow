@@ -60,8 +60,10 @@ jobs:
         run: |
           mkdir -p package
           cp -R dist/FocalFlow.app package/
-          cp -R dist_install/install_FocalFlow.app package/
-          cp -R dist_upgrade/upgrade_FocalFlow.app package/
+          cp dist_install/install_FocalFlow package/
+          cp install_FocalFlow.command package/
+          cp dist_upgrade/upgrade_FocalFlow package/
+          cp upgrade_FocalFlow.command package/
           cp splash_FocalFlow.py package/
           cp launch_FocalFlow.py package/
           cp place_result_FocalFlow.py package/
@@ -70,13 +72,8 @@ jobs:
           cp ffmpeg9arm ffmpeg80intel ffprobe9arm ffprobe80intel package/
           cp python-3.13.13-macos11.pkg package/
           cp README.txt package/
+          chmod +x package/install_FocalFlow package/install_FocalFlow.command
+          chmod +x package/upgrade_FocalFlow package/upgrade_FocalFlow.command
+          chmod +x package/ffmpeg9arm package/ffmpeg80intel package/ffprobe9arm package/ffprobe80intel
           cd package
           zip -r -y ../FocalFlow-Mac-Package.zip .
-
-      - name: Upload complete package
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: FocalFlow-Mac-Package
-          path: FocalFlow-Mac-Package.zip
-          retention-days: 14
