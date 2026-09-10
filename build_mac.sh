@@ -59,16 +59,22 @@ mkdir -p "$STAGE_UP"
 cp "$SCRIPT_DIR/upgrade_FocalFlow.py" "$STAGE_UP/"
 cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE_UP/"
 
-echo "Building upgrade_FocalFlow.app (double-clickable, console visible)..."
+echo "Building upgrade_FocalFlow binary..."
 $PYTHON -m PyInstaller \
     --noconfirm \
+    --onefile \
     --console \
     --name upgrade_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_upgrade" \
     --workpath "$SCRIPT_DIR/build_upgrade" \
     "$STAGE_UP/upgrade_FocalFlow.py" >> "$LOG" 2>&1
 
-echo "[OK] Upgrade tool build complete. Output: $SCRIPT_DIR/dist_upgrade/upgrade_FocalFlow.app" | tee -a "$LOG"
+if [ -f "$SCRIPT_DIR/dist_upgrade/upgrade_FocalFlow" ]; then
+    echo "[OK] Upgrade tool build complete. Output: $SCRIPT_DIR/dist_upgrade/upgrade_FocalFlow" | tee -a "$LOG"
+else
+    echo "ERROR: upgrade_FocalFlow binary not found after build!" | tee -a "$LOG"
+    exit 1
+fi
 
 echo "Staging install_FocalFlow build folder..."
 STAGE_INST="$SCRIPT_DIR/stage_install"
@@ -78,13 +84,19 @@ cp "$SCRIPT_DIR/install_mac.py" "$STAGE_INST/"
 cp "$SCRIPT_DIR/focal_paths.py" "$STAGE_INST/"
 cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE_INST/"
 
-echo "Building install_FocalFlow.app (double-clickable installer)..."
+echo "Building install_FocalFlow binary..."
 $PYTHON -m PyInstaller \
     --noconfirm \
+    --onefile \
     --console \
     --name install_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_install" \
     --workpath "$SCRIPT_DIR/build_install" \
     "$STAGE_INST/install_mac.py" >> "$LOG" 2>&1
 
-echo "[OK] Installer build complete. Output: $SCRIPT_DIR/dist_install/install_FocalFlow.app" | tee -a "$LOG"
+if [ -f "$SCRIPT_DIR/dist_install/install_FocalFlow" ]; then
+    echo "[OK] Installer build complete. Output: $SCRIPT_DIR/dist_install/install_FocalFlow" | tee -a "$LOG"
+else
+    echo "ERROR: install_FocalFlow binary not found after build!" | tee -a "$LOG"
+    exit 1
+fi
