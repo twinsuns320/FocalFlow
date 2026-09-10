@@ -7,47 +7,62 @@ echo "Build started: $(date)" > "$LOG"
 
 PYTHON=python3.13
 if ! command -v $PYTHON &> /dev/null; then
-    echo "ERROR: python3.13 not found. Install via python.org or brew." | tee -a "$LOG"
+    echo "ERROR: python3.13 not found." | tee -a "$LOG"
     exit 1
 fi
 
 echo "[OK] Python found: $($PYTHON --version)" | tee -a "$LOG"
 
-echo "Installing Nuitka..."
-$PYTHON -m pip install --upgrade nuitka ordered-set zstandard >> "$LOG" 2>&1
+echo "Installing Nuitka, PyInstaller, and dependencies..."
+$PYTHON -m pip install --upgrade nuitka ordered-set zstandard \
+    pyinstaller PyQt6 opencv-python-headless numpy pillow >> "$LOG" 2>&1
 
 echo "Cleaning old build artifacts..."
-rm -rf "$SCRIPT_DIR/dist" "$SCRIPT_DIR/dist_upgrade" "$SCRIPT_DIR/build" "$SCRIPT_DIR"/*.app
+rm -rf "$SCRIPT_DIR/dist" "$SCRIPT_DIR/build" "$SCRIPT_DIR/dist_upgrade" "$SCRIPT_DIR/build_upgrade" \
+       "$SCRIPT_DIR/compiled_license" "$SCRIPT_DIR"/*.spec "$SCRIPT_DIR"/*.so
 
-echo "Building FocalFlow.app..."
+echo "Compiling license.py to a native extension with Nuitka..."
 $PYTHON -m nuitka \
-    --mode=app \
-    --enable-plugin=pyqt6 \
-    --include-qt-plugins=platforms,imageformats,styles \
-    --include-package=PIL \
-    --include-package=cv2 \
-    --include-package=numpy \
-    --include-package=PyQt6 \
+    --module \
+    --output-dir="$SCRIPT_DIR/compiled_license" \
     --assume-yes-for-downloads \
-    --show-progress \
-    --output-dir="$SCRIPT_DIR/dist" \
-    --output-filename=FocalFlow \
-    --report="$SCRIPT_DIR/nuitka_report_focalflow.xml" \
-    --main="$SCRIPT_DIR/focalflow.py" >> "$LOG" 2>&1
+    "$SCRIPT_DIR/license.py" >> "$LOG" 2>&1
+
+echo "[OK] license.py compiled. Output: $SCRIPT_DIR/compiled_license" | tee -a "$LOG"
+
+echo "Staging build folder with compiled license module..."
+STAGE="$SCRIPT_DIR/stage"
+rm -rf "$STAGE"
+mkdir -p "$STAGE"
+cp "$SCRIPT_DIR/focalflow.py" "$STAGE/"
+cp "$SCRIPT_DIR/focal_paths.py" "$STAGE/"
+cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE/"
+
+echo "Building FocalFlow.app (GUI plain, license.py compiled)..."
+$PYTHON -m PyInstaller \
+    --windowed \
+    --name FocalFlow \
+    --distpath "$SCRIPT_DIR/dist" \
+    --workpath "$SCRIPT_DIR/build" \
+    --add-binary "$STAGE/license*.so:." \
+    "$STAGE/focalflow.py" >> "$LOG" 2>&1
 
 echo "[OK] FocalFlow build complete. Output: $SCRIPT_DIR/dist/FocalFlow.app" | tee -a "$LOG"
 
-echo "Building upgrade_FocalFlow.app..."
-$PYTHON -m nuitka \
-    --mode=app \
-    --assume-yes-for-downloads \
-    --show-progress \
-    --output-dir="$SCRIPT_DIR/dist_upgrade" \
-    --output-filename=upgrade_FocalFlow \
-    --report="$SCRIPT_DIR/nuitka_report_upgrade.xml" \
-    --main="$SCRIPT_DIR/upgrade_FocalFlow.py" >> "$LOG" 2>&1
+echo "Staging upgrade_FocalFlow build..."
+STAGE_UP="$SCRIPT_DIR/stage_upgrade"
+rm -rf "$STAGE_UP"
+mkdir -p "$STAGE_UP"
+cp "$SCRIPT_DIR/upgrade_FocalFlow.py" "$STAGE_UP/"
+cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE_UP/"
+
+echo "Building upgrade_FocalFlow.app (license.py compiled)..."
+$PYTHON -m PyInstaller \
+    --windowed \
+    --name upgrade_FocalFlow \
+    --distpath "$SCRIPT_DIR/dist_upgrade" \
+    --workpath "$SCRIPT_DIR/build_upgrade" \
+    --add-binary "$STAGE_UP/license*.so:." \
+    "$STAGE_UP/upgrade_FocalFlow.py" >> "$LOG" 2>&1
 
 echo "[OK] Upgrade tool build complete. Output: $SCRIPT_DIR/dist_upgrade/upgrade_FocalFlow.app" | tee -a "$LOG"
-
-# Optional, once you have a Developer ID (add after $99 step):
-# --macos-sign-identity="Developer ID Application: Your Name (TEAMID)"

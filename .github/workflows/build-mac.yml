@@ -27,7 +27,7 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install nuitka ordered-set zstandard \
-            PyQt6 opencv-python-headless numpy pillow
+            pyinstaller PyQt6 opencv-python-headless numpy pillow
 
       - name: Make build script executable
         run: chmod +x build_mac.sh
