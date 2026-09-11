@@ -66,6 +66,7 @@ $PYTHON -m PyInstaller \
     --noconfirm \
     --windowed \
     --target-architecture universal2 \
+    --exclude-module PIL._avif \
     --name FocalFlow \
     --distpath "$SCRIPT_DIR/dist" \
     --workpath "$SCRIPT_DIR/build" \
@@ -87,6 +88,7 @@ $PYTHON -m PyInstaller \
     --onefile \
     --console \
     --target-architecture universal2 \
+    --exclude-module PIL._avif \
     --name upgrade_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_upgrade" \
     --workpath "$SCRIPT_DIR/build_upgrade" \
@@ -114,6 +116,7 @@ $PYTHON -m PyInstaller \
     --onefile \
     --console \
     --target-architecture universal2 \
+    --exclude-module PIL._avif \
     --name install_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_install" \
     --workpath "$SCRIPT_DIR/build_install" \
