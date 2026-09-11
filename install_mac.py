@@ -275,21 +275,6 @@ def main():
             print("  Done.")
         else:
             print(f"  WARNING: {exe} not found — FocalFlow will look on PATH.")
-        if os.path.isfile(src):
-            print(f"  Copying {exe}...")
-            shutil.copy2(src, os.path.join(install_dir, dst_name))
-            shutil.copy2(src, os.path.join(macos_dir,   dst_name))
-            os.chmod(os.path.join(install_dir, dst_name), 0o755)
-            os.chmod(os.path.join(macos_dir, dst_name),   0o755)
-            for f in [os.path.join(install_dir, dst_name), os.path.join(macos_dir, dst_name)]:
-                try:
-                    subprocess.run(["xattr", "-d", "com.apple.quarantine", f],
-                                    capture_output=True)
-                except Exception:
-                    pass
-            print("  Done.")
-        else:
-            print(f"  WARNING: {exe} not found — FocalFlow will look on PATH.")
 
     print("  Copying Resolve scripts...")
     os.makedirs(RESOLVE_SCRIPTS, exist_ok=True)

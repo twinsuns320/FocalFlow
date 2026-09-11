@@ -78,6 +78,9 @@ $PYTHON -m PyInstaller \
     --noconfirm \
     --windowed \
     --target-architecture $ARCH \
+    --hidden-import=hmac \
+    --hidden-import=hashlib \
+    --hidden-import=base64 \
     --exclude-module PIL._avif \
     --name FocalFlow \
     --distpath "$SCRIPT_DIR/dist" \
@@ -100,6 +103,9 @@ $PYTHON -m PyInstaller \
     --onefile \
     --console \
     --target-architecture $ARCH \
+    --hidden-import=hmac \
+    --hidden-import=hashlib \
+    --hidden-import=base64 \
     --exclude-module PIL._avif \
     --name upgrade_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_upgrade" \
@@ -128,6 +134,9 @@ $PYTHON -m PyInstaller \
     --onefile \
     --console \
     --target-architecture $ARCH \
+    --hidden-import=hmac \
+    --hidden-import=hashlib \
+    --hidden-import=base64 \
     --exclude-module PIL._avif \
     --name install_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_install" \
