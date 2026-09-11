@@ -73,6 +73,7 @@ jobs:
           cp dist_upgrade/upgrade_FocalFlow package/
           cp upgrade_FocalFlow.command package/
           cp splash_FocalFlow.py package/
+	  cp focal_paths.py package/
           cp launch_FocalFlow.py package/
           cp place_result_FocalFlow.py package/
           cp settings_FocalFlow.py package/
@@ -157,6 +158,7 @@ jobs:
           cp dist_upgrade/upgrade_FocalFlow package/
           cp upgrade_FocalFlow.command package/
           cp splash_FocalFlow.py package/
+	  cp focal_paths.py package/
           cp launch_FocalFlow.py package/
           cp place_result_FocalFlow.py package/
           cp settings_FocalFlow.py package/

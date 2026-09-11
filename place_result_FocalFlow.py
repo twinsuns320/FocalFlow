@@ -1,7 +1,16 @@
 import sys, os, json, traceback
+
+try:
+    _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    _SCRIPT_DIR = os.path.expanduser("~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Comp")
+if _SCRIPT_DIR not in sys.path:
+    sys.path.append(_SCRIPT_DIR)
+
 import focal_paths
 
 _APP_DIR = os.path.join(focal_paths.get_install_dir(), "FocalFlow")
+os.makedirs(_APP_DIR, exist_ok=True)
 LOG          = os.path.join(_APP_DIR, "focal_launch_log.txt")
 POINTER_FILE = os.path.join(_APP_DIR, "focal_last_result.txt")
 

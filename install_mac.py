@@ -293,7 +293,7 @@ def main():
     os.makedirs(RESOLVE_SCRIPTS, exist_ok=True)
     missing = []
     for script in ["launch_FocalFlow.py", "place_result_FocalFlow.py",
-                   "settings_FocalFlow.py"]:
+                   "settings_FocalFlow.py", "focal_paths.py"]:
         src = os.path.join(here, script)
         if os.path.isfile(src):
             shutil.copy2(src, os.path.join(RESOLVE_SCRIPTS, script))

@@ -1,4 +1,12 @@
 import sys, os, subprocess, traceback
+
+try:
+    _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    _SCRIPT_DIR = os.path.expanduser("~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Comp")
+if _SCRIPT_DIR not in sys.path:
+    sys.path.append(_SCRIPT_DIR)
+
 import focal_paths
 
 FOCAL_DIR   = focal_paths.get_install_dir()
@@ -9,6 +17,7 @@ if not FOCAL_DIR or not PYTHON_PATH:
     raise RuntimeError("FocalFlow is not installed. Run the installer first.")
 
 LOG = os.path.join(FOCAL_DIR, "FocalFlow", "focal_launch_log.txt")
+os.makedirs(os.path.dirname(LOG), exist_ok=True)
 SPLASH_PATH = os.path.join(FOCAL_DIR, "splash_FocalFlow.py")
 
 try:

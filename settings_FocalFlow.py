@@ -1,6 +1,12 @@
 import sys, os, json
-import sys
-import os
+
+try:
+    _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    _SCRIPT_DIR = os.path.expanduser("~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Comp")
+if _SCRIPT_DIR not in sys.path:
+    sys.path.append(_SCRIPT_DIR)
+
 import focal_paths
 
 PREFERRED_PYTHON = focal_paths.get_python_path()
