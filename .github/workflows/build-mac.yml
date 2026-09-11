@@ -13,7 +13,15 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14      # Apple Silicon runner
+            arch: arm64
+          - os: macos-13      # Intel runner
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -23,7 +31,7 @@ jobs:
           sudo installer -pkg python-3.13.13-macos11.pkg -target /
           echo "/Library/Frameworks/Python.framework/Versions/3.13/bin" >> $GITHUB_PATH
 
-      - name: Verify universal2 Python
+      - name: Verify Python
         run: |
           python3.13 -c "import platform; print(platform.mac_ver())"
           lipo -info /Library/Frameworks/Python.framework/Versions/3.13/Python
@@ -40,6 +48,12 @@ jobs:
       - name: Run build
         run: ./build_mac.sh
 
+      - name: Verify build is single-arch as expected
+        run: |
+          APP="dist/FocalFlow.app/Contents/MacOS/FocalFlow"
+          echo "Expected arch: ${{ matrix.arch }}"
+          lipo -info "$APP"
+
       - name: Smoke test — app launches without crashing
         run: |
           APP="dist/FocalFlow.app/Contents/MacOS/FocalFlow"
@@ -55,7 +69,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
+          name: build-logs-${{ matrix.arch }}
           path: |
             build_log.txt
             nuitka_report_focalflow.xml
@@ -82,12 +96,12 @@ jobs:
           chmod +x package/upgrade_FocalFlow package/upgrade_FocalFlow.command
           chmod +x package/ffmpeg package/ffprobe
           cd package
-          zip -r -y ../FocalFlow-Mac-Package.zip .
+          ditto -c -k --keepParent . ../FocalFlow-Mac-${{ matrix.arch }}.zip
 
       - name: Upload complete package
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: FocalFlow-Mac-Package
-          path: FocalFlow-Mac-Package.zip
+          name: FocalFlow-Mac-${{ matrix.arch }}
+          path: FocalFlow-Mac-${{ matrix.arch }}.zip
           retention-days: 14

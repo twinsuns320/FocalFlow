@@ -3,12 +3,28 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG="$SCRIPT_DIR/build_log.txt"
 
-echo "Merging ffmpeg/ffprobe into universal2 binaries..."
-lipo -create "$SCRIPT_DIR/ffmpeg9arm" "$SCRIPT_DIR/ffmpeg80intel" -output "$SCRIPT_DIR/ffmpeg_universal"
-lipo -create "$SCRIPT_DIR/ffprobe9arm" "$SCRIPT_DIR/ffprobe80intel" -output "$SCRIPT_DIR/ffprobe_universal"
+# Build natively for whatever architecture this runner is.
+# We no longer attempt universal2 PyInstaller builds because
+# opencv-python-headless (and often Pillow) do not ship universal2
+# wheels, which breaks PyInstaller's COLLECT step with
+# "is not a fat binary!" errors. Run this script once per arch
+# (e.g. once on an arm64 runner, once on an x86_64 runner) via a
+# GitHub Actions matrix, and ship two separate packages.
+ARCH=$(uname -m)   # arm64 or x86_64
+echo "Building for native arch: $ARCH"
+
+echo "Selecting ffmpeg/ffprobe binary for $ARCH..."
+if [ "$ARCH" = "arm64" ]; then
+    cp "$SCRIPT_DIR/ffmpeg9arm" "$SCRIPT_DIR/ffmpeg_universal"
+    cp "$SCRIPT_DIR/ffprobe9arm" "$SCRIPT_DIR/ffprobe_universal"
+else
+    cp "$SCRIPT_DIR/ffmpeg80intel" "$SCRIPT_DIR/ffmpeg_universal"
+    cp "$SCRIPT_DIR/ffprobe80intel" "$SCRIPT_DIR/ffprobe_universal"
+fi
 chmod +x "$SCRIPT_DIR/ffmpeg_universal" "$SCRIPT_DIR/ffprobe_universal"
 
 echo "Build started: $(date)" > "$LOG"
+echo "Target architecture: $ARCH" | tee -a "$LOG"
 
 PYTHON=python3.13
 if ! command -v $PYTHON &> /dev/null; then
@@ -26,31 +42,27 @@ echo "Cleaning old build artifacts..."
 rm -rf "$SCRIPT_DIR/dist" "$SCRIPT_DIR/build" \
        "$SCRIPT_DIR/dist_upgrade" "$SCRIPT_DIR/build_upgrade" \
        "$SCRIPT_DIR/dist_install" "$SCRIPT_DIR/build_install" \
-       "$SCRIPT_DIR/compiled_license" "$SCRIPT_DIR/stage" "$SCRIPT_DIR/stage_upgrade" "$SCRIPT_DIR/stage_install" \
+       "$SCRIPT_DIR/compiled_license" "$SCRIPT_DIR/compiled_license_$ARCH" \
+       "$SCRIPT_DIR/stage" "$SCRIPT_DIR/stage_upgrade" "$SCRIPT_DIR/stage_install" \
        "$SCRIPT_DIR"/*.spec "$SCRIPT_DIR"/*.so
 
-echo "Compiling license.py for arm64..."
+echo "Compiling license.py for $ARCH..."
 $PYTHON -m nuitka \
     --module \
-    --macos-target-arch=arm64 \
-    --output-dir="$SCRIPT_DIR/compiled_license_arm64" \
+    --macos-target-arch=$ARCH \
+    --output-dir="$SCRIPT_DIR/compiled_license_$ARCH" \
     --assume-yes-for-downloads \
     "$SCRIPT_DIR/license.py" >> "$LOG" 2>&1
 
-echo "Compiling license.py for x86_64..."
-$PYTHON -m nuitka \
-    --module \
-    --macos-target-arch=x86_64 \
-    --output-dir="$SCRIPT_DIR/compiled_license_x86_64" \
-    --assume-yes-for-downloads \
-    "$SCRIPT_DIR/license.py" >> "$LOG" 2>&1
-
-echo "Merging license.so into a universal2 binary with lipo..."
+echo "Staging compiled license.so ($ARCH)..."
 mkdir -p "$SCRIPT_DIR/compiled_license"
-ARM_SO=$(find "$SCRIPT_DIR/compiled_license_arm64" -name "license*.so")
-X86_SO=$(find "$SCRIPT_DIR/compiled_license_x86_64" -name "license*.so")
-lipo -create "$ARM_SO" "$X86_SO" -output "$SCRIPT_DIR/compiled_license/license.cpython-313-darwin.so"
-echo "[OK] license.so is now universal2:" | tee -a "$LOG"
+SO_FILE=$(find "$SCRIPT_DIR/compiled_license_$ARCH" -name "license*.so")
+if [ -z "$SO_FILE" ]; then
+    echo "ERROR: compiled license.so not found for $ARCH!" | tee -a "$LOG"
+    exit 1
+fi
+cp "$SO_FILE" "$SCRIPT_DIR/compiled_license/license.cpython-313-darwin.so"
+echo "[OK] license.so compiled for $ARCH:" | tee -a "$LOG"
 lipo -info "$SCRIPT_DIR/compiled_license/license.cpython-313-darwin.so" | tee -a "$LOG"
 
 echo "Staging FocalFlow build folder..."
@@ -61,11 +73,11 @@ cp "$SCRIPT_DIR/focalflow.py" "$STAGE/"
 cp "$SCRIPT_DIR/focal_paths.py" "$STAGE/"
 cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE/"
 
-echo "Building FocalFlow.app (universal2)..."
+echo "Building FocalFlow.app (native $ARCH)..."
 $PYTHON -m PyInstaller \
     --noconfirm \
     --windowed \
-    --target-architecture universal2 \
+    --target-architecture $ARCH \
     --exclude-module PIL._avif \
     --name FocalFlow \
     --distpath "$SCRIPT_DIR/dist" \
@@ -82,12 +94,12 @@ mkdir -p "$STAGE_UP"
 cp "$SCRIPT_DIR/upgrade_FocalFlow.py" "$STAGE_UP/"
 cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE_UP/"
 
-echo "Building upgrade_FocalFlow (universal2)..."
+echo "Building upgrade_FocalFlow (native $ARCH)..."
 $PYTHON -m PyInstaller \
     --noconfirm \
     --onefile \
     --console \
-    --target-architecture universal2 \
+    --target-architecture $ARCH \
     --exclude-module PIL._avif \
     --name upgrade_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_upgrade" \
@@ -110,12 +122,12 @@ cp "$SCRIPT_DIR/install_mac.py" "$STAGE_INST/"
 cp "$SCRIPT_DIR/focal_paths.py" "$STAGE_INST/"
 cp "$SCRIPT_DIR"/compiled_license/license*.so "$STAGE_INST/"
 
-echo "Building install_FocalFlow (universal2)..."
+echo "Building install_FocalFlow (native $ARCH)..."
 $PYTHON -m PyInstaller \
     --noconfirm \
     --onefile \
     --console \
-    --target-architecture universal2 \
+    --target-architecture $ARCH \
     --exclude-module PIL._avif \
     --name install_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_install" \
