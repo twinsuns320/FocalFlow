@@ -18,10 +18,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
+      - name: Install universal2 Python from python.org pkg
+        run: |
+          sudo installer -pkg python-3.13.13-macos11.pkg -target /
+          echo "/Library/Frameworks/Python.framework/Versions/3.13/bin" >> $GITHUB_PATH
+
+      - name: Verify universal2 Python
+        run: |
+          python3.13 -c "import platform; print(platform.mac_ver())"
+          lipo -info /Library/Frameworks/Python.framework/Versions/3.13/Python
 
       - name: Install Python deps
         run: |
@@ -69,12 +74,13 @@ jobs:
           cp place_result_FocalFlow.py package/
           cp settings_FocalFlow.py package/
           cp uninstall_FocalFlow.command package/
-          cp ffmpeg9arm ffmpeg80intel ffprobe9arm ffprobe80intel package/
+          cp ffmpeg_universal package/ffmpeg
+          cp ffprobe_universal package/ffprobe
           cp python-3.13.13-macos11.pkg package/
           cp README.txt package/
           chmod +x package/install_FocalFlow package/install_FocalFlow.command
           chmod +x package/upgrade_FocalFlow package/upgrade_FocalFlow.command
-          chmod +x package/ffmpeg9arm package/ffmpeg80intel package/ffprobe9arm package/ffprobe80intel
+          chmod +x package/ffmpeg package/ffprobe
           cd package
           zip -r -y ../FocalFlow-Mac-Package.zip .
 

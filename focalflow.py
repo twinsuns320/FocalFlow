@@ -71,18 +71,13 @@ _PARENT = os.path.dirname(_HERE)
 
 def _find_ffmpeg():
     import platform
-    machine = platform.machine()  # 'arm64' or 'x86_64' on Mac
     candidates = [
         os.path.join(_HERE,   "ffmpeg.exe"),
         os.path.join(_PARENT, "ffmpeg.exe"),
+        os.path.join(_HERE,   "ffmpeg"),
+        os.path.join(_PARENT, "ffmpeg"),
     ]
     if platform.system() == "Darwin":
-        if machine == "arm64":
-            candidates += [os.path.join(_HERE, "ffmpeg9arm"),
-                            os.path.join(_PARENT, "ffmpeg9arm")]
-        else:
-            candidates += [os.path.join(_HERE, "ffmpeg80intel"),
-                            os.path.join(_PARENT, "ffmpeg80intel")]
         candidates += ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"]
     candidates.append("ffmpeg")
     for candidate in candidates:
@@ -94,17 +89,11 @@ FFMPEG = _find_ffmpeg()
 
 def _find_ffprobe():
     import platform
-    machine = platform.machine()
     candidates = [
         FFMPEG.replace("ffmpeg.exe", "ffprobe.exe"),
+        FFMPEG.replace("ffmpeg", "ffprobe"),
     ]
     if platform.system() == "Darwin":
-        if machine == "arm64":
-            candidates += [os.path.join(_HERE, "ffprobe9arm"),
-                            os.path.join(_PARENT, "ffprobe9arm")]
-        else:
-            candidates += [os.path.join(_HERE, "ffprobe80intel"),
-                            os.path.join(_PARENT, "ffprobe80intel")]
         candidates += ["/opt/homebrew/bin/ffprobe", "/usr/local/bin/ffprobe"]
     candidates.append("ffprobe")
     for candidate in candidates:

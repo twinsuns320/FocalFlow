@@ -256,14 +256,25 @@ def main():
         shutil.copy2(splash_src, os.path.join(install_dir, "splash_FocalFlow.py"))
     print("  Done.")
 
-    import platform
-    machine = platform.machine()
-    ffmpeg_name  = "ffmpeg9arm"  if machine == "arm64" else "ffmpeg80intel"
-    ffprobe_name = "ffprobe9arm" if machine == "arm64" else "ffprobe80intel"
     macos_dir = os.path.join(app_dst, "Contents", "MacOS")
 
-    for exe, dst_name in [(ffmpeg_name, "ffmpeg"), (ffprobe_name, "ffprobe")]:
+    for exe in ["ffmpeg", "ffprobe"]:
         src = os.path.join(here, exe)
+        if os.path.isfile(src):
+            print(f"  Copying {exe}...")
+            shutil.copy2(src, os.path.join(install_dir, exe))
+            shutil.copy2(src, os.path.join(macos_dir, exe))
+            os.chmod(os.path.join(install_dir, exe), 0o755)
+            os.chmod(os.path.join(macos_dir, exe), 0o755)
+            for f in [os.path.join(install_dir, exe), os.path.join(macos_dir, exe)]:
+                try:
+                    subprocess.run(["xattr", "-d", "com.apple.quarantine", f],
+                                    capture_output=True)
+                except Exception:
+                    pass
+            print("  Done.")
+        else:
+            print(f"  WARNING: {exe} not found — FocalFlow will look on PATH.")
         if os.path.isfile(src):
             print(f"  Copying {exe}...")
             shutil.copy2(src, os.path.join(install_dir, dst_name))
