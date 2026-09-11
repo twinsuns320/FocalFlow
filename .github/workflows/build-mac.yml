@@ -86,7 +86,7 @@ jobs:
           chmod +x package/upgrade_FocalFlow package/upgrade_FocalFlow.command
           chmod +x package/ffmpeg package/ffprobe
           cd package
-          ditto -c -k --keepParent . ../FocalFlow-Mac-x86_64.zip
+          zip -r ../FocalFlow-Mac-x86_64.zip .
 
       - name: Upload complete package
         if: success()
@@ -171,7 +171,7 @@ jobs:
           chmod +x package/upgrade_FocalFlow package/upgrade_FocalFlow.command
           chmod +x package/ffmpeg package/ffprobe
           cd package
-          ditto -c -k --keepParent . ../FocalFlow-Mac-arm64.zip
+          zip -r ../FocalFlow-Mac-arm64.zip .
 
       - name: Upload complete package
         if: success()
