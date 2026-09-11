@@ -12,90 +12,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-arm64:
-    runs-on: macos-14
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Install universal2 Python from python.org pkg
-        run: |
-          sudo installer -pkg python-3.13.13-macos11.pkg -target /
-          echo "/Library/Frameworks/Python.framework/Versions/3.13/bin" >> $GITHUB_PATH
-
-      - name: Verify Python
-        run: |
-          python3.13 -c "import platform; print(platform.mac_ver())"
-          lipo -info /Library/Frameworks/Python.framework/Versions/3.13/Python
-
-      - name: Install Python deps
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install nuitka ordered-set zstandard \
-            pyinstaller PyQt6 opencv-python-headless numpy pillow
-
-      - name: Make build script executable
-        run: chmod +x build_mac.sh
-
-      - name: Run build
-        run: ./build_mac.sh
-
-      - name: Verify build is arm64
-        run: lipo -info dist/FocalFlow.app/Contents/MacOS/FocalFlow
-
-      - name: Smoke test — app launches without crashing
-        run: |
-          APP="dist/FocalFlow.app/Contents/MacOS/FocalFlow"
-          if [ ! -f "$APP" ]; then
-            echo "ERROR: built binary not found at $APP"
-            exit 1
-          fi
-          timeout 5 "$APP" --hidden || true
-          echo "Launch check complete (non-zero exit from timeout is expected/OK)."
-
-      - name: Upload build logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs-arm64
-          path: |
-            build_log.txt
-            nuitka_report_focalflow.xml
-
-      - name: Assemble final distributable package
-        if: success()
-        run: |
-          mkdir -p package
-          cp -R dist/FocalFlow.app package/
-          cp dist_install/install_FocalFlow package/
-          cp install_FocalFlow.command package/
-          cp dist_upgrade/upgrade_FocalFlow package/
-          cp upgrade_FocalFlow.command package/
-          cp splash_FocalFlow.py package/
-          cp launch_FocalFlow.py package/
-          cp place_result_FocalFlow.py package/
-          cp settings_FocalFlow.py package/
-          cp uninstall_FocalFlow.command package/
-          cp ffmpeg_universal package/ffmpeg
-          cp ffprobe_universal package/ffprobe
-          cp python-3.13.13-macos11.pkg package/
-          cp README.txt package/
-          chmod +x package/install_FocalFlow package/install_FocalFlow.command
-          chmod +x package/upgrade_FocalFlow package/upgrade_FocalFlow.command
-          chmod +x package/ffmpeg package/ffprobe
-          cd package
-          ditto -c -k --keepParent . ../FocalFlow-Mac-arm64.zip
-
-      - name: Upload complete package
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: FocalFlow-Mac-arm64
-          path: FocalFlow-Mac-arm64.zip
-          retention-days: 14
-
   build-x86_64:
-    needs: build-arm64
     runs-on: macos-13
     steps:
       - name: Checkout repo
@@ -133,8 +50,9 @@ jobs:
             echo "ERROR: built binary not found at $APP"
             exit 1
           fi
-          timeout 5 "$APP" --hidden || true
-          echo "Launch check complete (non-zero exit from timeout is expected/OK)."
+          timeout -s KILL 5 "$APP" --hidden || true
+          pkill -9 -f "FocalFlow" || true
+          echo "Launch check complete."
 
       - name: Upload build logs
         if: always()
@@ -175,4 +93,88 @@ jobs:
         with:
           name: FocalFlow-Mac-x86_64
           path: FocalFlow-Mac-x86_64.zip
+          retention-days: 14
+
+  build-arm64:
+    needs: build-x86_64
+    runs-on: macos-14
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install universal2 Python from python.org pkg
+        run: |
+          sudo installer -pkg python-3.13.13-macos11.pkg -target /
+          echo "/Library/Frameworks/Python.framework/Versions/3.13/bin" >> $GITHUB_PATH
+
+      - name: Verify Python
+        run: |
+          python3.13 -c "import platform; print(platform.mac_ver())"
+          lipo -info /Library/Frameworks/Python.framework/Versions/3.13/Python
+
+      - name: Install Python deps
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install nuitka ordered-set zstandard \
+            pyinstaller PyQt6 opencv-python-headless numpy pillow
+
+      - name: Make build script executable
+        run: chmod +x build_mac.sh
+
+      - name: Run build
+        run: ./build_mac.sh
+
+      - name: Verify build is arm64
+        run: lipo -info dist/FocalFlow.app/Contents/MacOS/FocalFlow
+
+      - name: Smoke test — app launches without crashing
+        run: |
+          APP="dist/FocalFlow.app/Contents/MacOS/FocalFlow"
+          if [ ! -f "$APP" ]; then
+            echo "ERROR: built binary not found at $APP"
+            exit 1
+          fi
+          timeout -s KILL 5 "$APP" --hidden || true
+          pkill -9 -f "FocalFlow" || true
+          echo "Launch check complete."
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-arm64
+          path: |
+            build_log.txt
+            nuitka_report_focalflow.xml
+
+      - name: Assemble final distributable package
+        if: success()
+        run: |
+          mkdir -p package
+          cp -R dist/FocalFlow.app package/
+          cp dist_install/install_FocalFlow package/
+          cp install_FocalFlow.command package/
+          cp dist_upgrade/upgrade_FocalFlow package/
+          cp upgrade_FocalFlow.command package/
+          cp splash_FocalFlow.py package/
+          cp launch_FocalFlow.py package/
+          cp place_result_FocalFlow.py package/
+          cp settings_FocalFlow.py package/
+          cp uninstall_FocalFlow.command package/
+          cp ffmpeg_universal package/ffmpeg
+          cp ffprobe_universal package/ffprobe
+          cp python-3.13.13-macos11.pkg package/
+          cp README.txt package/
+          chmod +x package/install_FocalFlow package/install_FocalFlow.command
+          chmod +x package/upgrade_FocalFlow package/upgrade_FocalFlow.command
+          chmod +x package/ffmpeg package/ffprobe
+          cd package
+          ditto -c -k --keepParent . ../FocalFlow-Mac-arm64.zip
+
+      - name: Upload complete package
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FocalFlow-Mac-arm64
+          path: FocalFlow-Mac-arm64.zip
           retention-days: 14
