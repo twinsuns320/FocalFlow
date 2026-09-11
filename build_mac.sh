@@ -81,6 +81,11 @@ $PYTHON -m PyInstaller \
     --hidden-import=hmac \
     --hidden-import=hashlib \
     --hidden-import=base64 \
+    --hidden-import=platform \
+    --hidden-import=subprocess \
+    --hidden-import=urllib.request \
+    --hidden-import=urllib.parse \
+    --hidden-import=json \
     --exclude-module PIL._avif \
     --name FocalFlow \
     --distpath "$SCRIPT_DIR/dist" \
@@ -106,6 +111,11 @@ $PYTHON -m PyInstaller \
     --hidden-import=hmac \
     --hidden-import=hashlib \
     --hidden-import=base64 \
+    --hidden-import=platform \
+    --hidden-import=subprocess \
+    --hidden-import=urllib.request \
+    --hidden-import=urllib.parse \
+    --hidden-import=json \
     --exclude-module PIL._avif \
     --name upgrade_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_upgrade" \
@@ -137,6 +147,11 @@ $PYTHON -m PyInstaller \
     --hidden-import=hmac \
     --hidden-import=hashlib \
     --hidden-import=base64 \
+    --hidden-import=platform \
+    --hidden-import=subprocess \
+    --hidden-import=urllib.request \
+    --hidden-import=urllib.parse \
+    --hidden-import=json \
     --exclude-module PIL._avif \
     --name install_FocalFlow \
     --distpath "$SCRIPT_DIR/dist_install" \

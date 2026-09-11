@@ -10,11 +10,14 @@ import license
 RESOLVE_SCRIPTS = focal_paths.resolve_comp_scripts_dir()
 
 
+MIN_PY = (3, 10)
+MAX_PY = (3, 13)
+
 def check_system_python():
     """
-    Returns (found: bool, version_str: str | None).
-    We deliberately avoid 'which python3' and rely purely on the shell
-    resolving 'python3' the same way Resolve would.
+    Returns (found_and_supported: bool, version_str: str | None).
+    Rejects missing Python, the Apple CLT stub, and anything outside
+    the tested range.
     """
     try:
         result = subprocess.run(
@@ -24,9 +27,18 @@ def check_system_python():
             timeout=10
         )
         output = (result.stdout + result.stderr).strip()
-        if result.returncode == 0 and output.lower().startswith("python"):
-            return True, output
-        return False, None
+        if result.returncode != 0 or not output.lower().startswith("python"):
+            return False, None
+
+        version_str = output.split()[1]  # e.g. "3.9.6"
+        parts = tuple(int(x) for x in version_str.split(".")[:2])
+
+        if parts < MIN_PY or parts > MAX_PY:
+            print(f"  Found Python {version_str}, but FocalFlow needs")
+            print(f"  {MIN_PY[0]}.{MIN_PY[1]}–{MAX_PY[0]}.{MAX_PY[1]} for Resolve scripting.")
+            return False, output
+
+        return True, output
     except FileNotFoundError:
         return False, None
     except Exception:
@@ -277,12 +289,31 @@ def main():
             print(f"  WARNING: {exe} not found — FocalFlow will look on PATH.")
 
     print("  Copying Resolve scripts...")
+    print(f"  (Looking for scripts in: {here})")
     os.makedirs(RESOLVE_SCRIPTS, exist_ok=True)
+    missing = []
     for script in ["launch_FocalFlow.py", "place_result_FocalFlow.py",
                    "settings_FocalFlow.py"]:
         src = os.path.join(here, script)
         if os.path.isfile(src):
             shutil.copy2(src, os.path.join(RESOLVE_SCRIPTS, script))
+            print(f"    [OK] {script}")
+        else:
+            missing.append(script)
+            print(f"    [MISSING] {script} not found at {src}")
+
+    if missing:
+        print()
+        print("  ==========================================")
+        print("   WARNING: SOME RESOLVE SCRIPTS WERE NOT COPIED")
+        print("  ==========================================")
+        print(f"  Missing: {', '.join(missing)}")
+        print("  Make sure install_FocalFlow is run from inside")
+        print("  the full extracted FocalFlow folder, not moved")
+        print("  out on its own.")
+        print()
+        input("  Press Enter to exit.")
+        sys.exit(1)
     print("  Done.")
 
     for f in ["README.txt", "uninstall_FocalFlow.command"]:
