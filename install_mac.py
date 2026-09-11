@@ -262,11 +262,20 @@ def main():
     shutil.copytree(focal_src, app_dst)
     print("  Done.")
 
-    print("  Copying scripts...")
-    splash_src = os.path.join(here, "splash_FocalFlow.py")
+    print("  Copying splash screen...")
+    splash_src = os.path.join(here, "splash_FocalFlow")
     if os.path.isfile(splash_src):
-        shutil.copy2(splash_src, os.path.join(install_dir, "splash_FocalFlow.py"))
-    print("  Done.")
+        splash_dst = os.path.join(install_dir, "splash_FocalFlow")
+        shutil.copy2(splash_src, splash_dst)
+        os.chmod(splash_dst, 0o755)
+        try:
+            subprocess.run(["xattr", "-d", "com.apple.quarantine", splash_dst],
+                            capture_output=True)
+        except Exception:
+            pass
+        print("  Done.")
+    else:
+        print(f"  WARNING: splash_FocalFlow not found at {splash_src}")
 
     macos_dir = os.path.join(app_dst, "Contents", "MacOS")
 

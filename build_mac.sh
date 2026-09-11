@@ -42,8 +42,9 @@ echo "Cleaning old build artifacts..."
 rm -rf "$SCRIPT_DIR/dist" "$SCRIPT_DIR/build" \
        "$SCRIPT_DIR/dist_upgrade" "$SCRIPT_DIR/build_upgrade" \
        "$SCRIPT_DIR/dist_install" "$SCRIPT_DIR/build_install" \
+       "$SCRIPT_DIR/dist_splash" "$SCRIPT_DIR/build_splash" \
        "$SCRIPT_DIR/compiled_license" "$SCRIPT_DIR/compiled_license_$ARCH" \
-       "$SCRIPT_DIR/stage" "$SCRIPT_DIR/stage_upgrade" "$SCRIPT_DIR/stage_install" \
+       "$SCRIPT_DIR/stage" "$SCRIPT_DIR/stage_upgrade" "$SCRIPT_DIR/stage_install" "$SCRIPT_DIR/stage_splash" \
        "$SCRIPT_DIR"/*.spec "$SCRIPT_DIR"/*.so
 
 echo "Compiling license.py for $ARCH..."
@@ -163,5 +164,30 @@ if [ -f "$SCRIPT_DIR/dist_install/install_FocalFlow" ]; then
     lipo -info "$SCRIPT_DIR/dist_install/install_FocalFlow" | tee -a "$LOG"
 else
     echo "ERROR: install_FocalFlow binary not found after build!" | tee -a "$LOG"
+    exit 1
+fi
+
+echo "Staging splash_FocalFlow build folder..."
+STAGE_SPLASH="$SCRIPT_DIR/stage_splash"
+rm -rf "$STAGE_SPLASH"
+mkdir -p "$STAGE_SPLASH"
+cp "$SCRIPT_DIR/splash_FocalFlow.py" "$STAGE_SPLASH/"
+
+echo "Building splash_FocalFlow (native $ARCH)..."
+$PYTHON -m PyInstaller \
+    --noconfirm \
+    --onefile \
+    --windowed \
+    --target-architecture $ARCH \
+    --name splash_FocalFlow \
+    --distpath "$SCRIPT_DIR/dist_splash" \
+    --workpath "$SCRIPT_DIR/build_splash" \
+    "$STAGE_SPLASH/splash_FocalFlow.py" >> "$LOG" 2>&1
+
+if [ -f "$SCRIPT_DIR/dist_splash/splash_FocalFlow" ]; then
+    echo "[OK] Splash build complete." | tee -a "$LOG"
+    lipo -info "$SCRIPT_DIR/dist_splash/splash_FocalFlow" | tee -a "$LOG"
+else
+    echo "ERROR: splash_FocalFlow binary not found after build!" | tee -a "$LOG"
     exit 1
 fi

@@ -18,7 +18,7 @@ if not FOCAL_DIR or not PYTHON_PATH:
 
 LOG = os.path.join(FOCAL_DIR, "FocalFlow", "focal_launch_log.txt")
 os.makedirs(os.path.dirname(LOG), exist_ok=True)
-SPLASH_PATH = os.path.join(FOCAL_DIR, "splash_FocalFlow.py")
+SPLASH_PATH = os.path.join(FOCAL_DIR, "splash_FocalFlow")
 
 try:
     if "resolve" not in dir():
@@ -89,7 +89,7 @@ try:
         f.write(f"Track     : {selected_track}\n")
 
     splash_cmd = [
-        PYTHON_PATH, SPLASH_PATH,
+        SPLASH_PATH,
         "--file",        file_path,
         "--in",          str(source_in),
         "--out",         str(source_out),
