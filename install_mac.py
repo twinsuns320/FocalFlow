@@ -336,7 +336,7 @@ def main():
     print("  the new scripts to appear in the menu.")
     print()
     cleanup_installer_contents(here)
-    input("  Press Enter to exit.")
+    input(" Press Enter to exit.")
     cleanup_downloads(here)
 
 
