@@ -240,7 +240,7 @@ def main():
     print()
 
     print("  Copying FocalFlow application...")
-    focal_src = os.path.join(here, "dist", "FocalFlow.app")
+    focal_src = os.path.join(here, "FocalFlow.app")
     if not os.path.isdir(focal_src):
         print(f"\n  ERROR: FocalFlow.app not found at {focal_src}")
         input("\n  Press Enter to exit."); sys.exit(1)
@@ -285,22 +285,28 @@ def main():
             shutil.copy2(src, os.path.join(RESOLVE_SCRIPTS, script))
     print("  Done.")
 
-    for f in ["README.txt", "uninstall_FocalFlow.sh"]:
+    for f in ["README.txt", "uninstall_FocalFlow.command"]:
         src = os.path.join(here, f)
         if os.path.isfile(src):
             shutil.copy2(src, os.path.join(install_dir, f))
+            if f.endswith(".command"):
+                os.chmod(os.path.join(install_dir, f), 0o755)
 
     print("  Copying upgrader...")
-    upgrade_src = os.path.join(here, "dist_upgrade", "upgrade_FocalFlow.app")
-    if os.path.isdir(upgrade_src):
-        upgrade_dst = os.path.join(install_dir, "upgrade_FocalFlow.app")
-        if os.path.isdir(upgrade_dst):
-            shutil.rmtree(upgrade_dst)
-        shutil.copytree(upgrade_src, upgrade_dst)
+    upgrade_src = os.path.join(here, "upgrade_FocalFlow")
+    if os.path.isfile(upgrade_src):
+        upgrade_dst = os.path.join(install_dir, "upgrade_FocalFlow")
+        shutil.copy2(upgrade_src, upgrade_dst)
+        os.chmod(upgrade_dst, 0o755)
+        try:
+            subprocess.run(["xattr", "-d", "com.apple.quarantine", upgrade_dst],
+                            capture_output=True)
+        except Exception:
+            pass
         print("  Done.")
     else:
-        print(f"  WARNING: upgrade_FocalFlow.app not found at {upgrade_src}")
-        print("  upgrade_FocalFlow.app was not installed.")
+        print(f"  WARNING: upgrade_FocalFlow not found at {upgrade_src}")
+        print("  upgrade_FocalFlow was not installed.")
 
     print("  Writing registry entries...")
     if not write_registry(install_dir, python_path):
