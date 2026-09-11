@@ -78,8 +78,42 @@ def resolve_comp_scripts_dir():
     )
 
 def check_resolve_installed():
+    """
+    Detects DaVinci Resolve on the system.
+
+    On Mac we don't hardcode a single expected path — Resolve can live at
+    /Applications/DaVinci Resolve.app, or nested one level deeper at
+    /Applications/DaVinci Resolve/DaVinci Resolve.app, and the app name
+    itself differs between the free and Studio editions. Instead we scan
+    /Applications (and one level of subfolders) for anything whose name
+    contains "davinci", case-insensitively, and ending in .app.
+    """
     if IS_MAC:
-        return os.path.isdir("/Applications/DaVinci Resolve.app")
+        apps_dir = "/Applications"
+        try:
+            entries = os.listdir(apps_dir)
+        except Exception:
+            return False
+
+        for name in entries:
+            low = name.lower()
+            full = os.path.join(apps_dir, name)
+
+            # Direct match: "DaVinci Resolve.app" / "DaVinci Resolve Studio.app"
+            if "davinci" in low and low.endswith(".app") and os.path.isdir(full):
+                return True
+
+            # One level deeper: "DaVinci Resolve/DaVinci Resolve.app"
+            if "davinci" in low and os.path.isdir(full):
+                try:
+                    for sub in os.listdir(full):
+                        if "davinci" in sub.lower() and sub.lower().endswith(".app"):
+                            return True
+                except Exception:
+                    pass
+
+        return False
+
     resolve_path = os.path.join(
         os.environ.get("ProgramData", "C:\\ProgramData"),
         "Blackmagic Design", "DaVinci Resolve"
