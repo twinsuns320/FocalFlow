@@ -43,8 +43,9 @@ rm -rf "$SCRIPT_DIR/dist" "$SCRIPT_DIR/build" \
        "$SCRIPT_DIR/dist_upgrade" "$SCRIPT_DIR/build_upgrade" \
        "$SCRIPT_DIR/dist_install" "$SCRIPT_DIR/build_install" \
        "$SCRIPT_DIR/dist_splash" "$SCRIPT_DIR/build_splash" \
+       "$SCRIPT_DIR/dist_settings" "$SCRIPT_DIR/build_settings" \
        "$SCRIPT_DIR/compiled_license" "$SCRIPT_DIR/compiled_license_$ARCH" \
-       "$SCRIPT_DIR/stage" "$SCRIPT_DIR/stage_upgrade" "$SCRIPT_DIR/stage_install" "$SCRIPT_DIR/stage_splash" \
+       "$SCRIPT_DIR/stage" "$SCRIPT_DIR/stage_upgrade" "$SCRIPT_DIR/stage_install" "$SCRIPT_DIR/stage_splash" "$SCRIPT_DIR/stage_settings" \
        "$SCRIPT_DIR"/*.spec "$SCRIPT_DIR"/*.so
 
 echo "Compiling license.py for $ARCH..."
@@ -176,7 +177,6 @@ cp "$SCRIPT_DIR/splash_FocalFlow.py" "$STAGE_SPLASH/"
 echo "Building splash_FocalFlow (native $ARCH)..."
 $PYTHON -m PyInstaller \
     --noconfirm \
-    --onefile \
     --windowed \
     --target-architecture $ARCH \
     --name splash_FocalFlow \
@@ -184,10 +184,35 @@ $PYTHON -m PyInstaller \
     --workpath "$SCRIPT_DIR/build_splash" \
     "$STAGE_SPLASH/splash_FocalFlow.py" >> "$LOG" 2>&1
 
-if [ -f "$SCRIPT_DIR/dist_splash/splash_FocalFlow" ]; then
+if [ -d "$SCRIPT_DIR/dist_splash/splash_FocalFlow.app" ]; then
     echo "[OK] Splash build complete." | tee -a "$LOG"
-    lipo -info "$SCRIPT_DIR/dist_splash/splash_FocalFlow" | tee -a "$LOG"
+    lipo -info "$SCRIPT_DIR/dist_splash/splash_FocalFlow.app/Contents/MacOS/splash_FocalFlow" | tee -a "$LOG"
 else
-    echo "ERROR: splash_FocalFlow binary not found after build!" | tee -a "$LOG"
+    echo "ERROR: splash_FocalFlow.app not found after build!" | tee -a "$LOG"
+    exit 1
+fi
+
+
+echo "Staging Settings_FocalFlow build folder..."
+STAGE_SETTINGS="$SCRIPT_DIR/stage_settings"
+rm -rf "$STAGE_SETTINGS"
+mkdir -p "$STAGE_SETTINGS"
+cp "$SCRIPT_DIR/settings_app.py" "$STAGE_SETTINGS/"
+cp "$SCRIPT_DIR/focal_paths.py" "$STAGE_SETTINGS/"
+
+echo "Building Settings_FocalFlow (native $ARCH)..."
+$PYTHON -m PyInstaller \
+    --noconfirm \
+    --windowed \
+    --target-architecture $ARCH \
+    --name Settings_FocalFlow \
+    --distpath "$SCRIPT_DIR/dist_settings" \
+    --workpath "$SCRIPT_DIR/build_settings" \
+    "$STAGE_SETTINGS/settings_app.py" >> "$LOG" 2>&1
+
+if [ -d "$SCRIPT_DIR/dist_settings/Settings_FocalFlow.app" ]; then
+    echo "[OK] Settings app build complete." | tee -a "$LOG"
+else
+    echo "ERROR: Settings_FocalFlow.app not found after build!" | tee -a "$LOG"
     exit 1
 fi

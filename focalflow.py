@@ -69,6 +69,20 @@ else:
     _HERE = os.path.dirname(os.path.abspath(sys.argv[0]))
 _PARENT = os.path.dirname(_HERE)
 
+# On Mac, a frozen build lives at install_dir/FocalFlow.app/Contents/MacOS,
+# three levels deeper than Windows' flat install_dir/FocalFlow/ onedir
+# layout. The Resolve-side scripts (place_result_FocalFlow.py, the
+# settings app) expect shared files — prefs, logs, the "last result"
+# pointer — at install_dir/FocalFlow/. Redirect there on Mac so both
+# sides agree on the same location; on Windows this is a no-op.
+import platform as _platform_check
+if _platform_check.system() == "Darwin" and getattr(sys, 'frozen', False):
+    _INSTALL_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(_HERE)))
+    _SHARED_DIR   = os.path.join(_INSTALL_ROOT, "FocalFlow")
+    os.makedirs(_SHARED_DIR, exist_ok=True)
+else:
+    _SHARED_DIR = _HERE
+
 def _find_ffmpeg():
     import platform
     candidates = [
@@ -106,8 +120,8 @@ FFPROBE = _find_ffprobe()
 
 _CFLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
-PREFS_PATH = os.path.join(_HERE, "focal_prefs.json")
-LOG_PATH   = os.path.join(_HERE, "focal_launch_log.txt")
+PREFS_PATH = os.path.join(_SHARED_DIR, "focal_prefs.json")
+LOG_PATH   = os.path.join(_SHARED_DIR, "focal_launch_log.txt")
 
 FORMAT_OPTIONS = {
     "prores_4444":  {"label": "ProRes 4444",        "codec": "prores_ks", "profile": "4",         "pix_fmt": "yuv444p10le", "ext": "mov"},
@@ -124,6 +138,31 @@ def _log(msg):
             f.write(f"{datetime.datetime.now().strftime('%H:%M:%S')}  {msg}\n")
     except Exception:
         pass
+
+def _load_watermark_font(size):
+    import platform as _plat
+    candidates = []
+    if _plat.system() == "Windows":
+        candidates = [r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\arial.ttf"]
+    elif _plat.system() == "Darwin":
+        candidates = [
+            "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/Library/Fonts/Arial Bold.ttf",
+            "/Library/Fonts/Arial.ttf",
+        ]
+    else:
+        candidates = ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"]
+
+    from PIL import ImageFont
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size=size)
+        except Exception:
+            continue
+    _log(f"Watermark: no truetype font found for {_plat.system()}, using scaled bitmap fallback")
+    return None
 
 
 def _check_activation():
@@ -306,6 +345,7 @@ class VideoCanvas(QWidget):
     pointRadiusChanged   = pyqtSignal(int, float, bool)
     trackerTypeToggled   = pyqtSignal(int)
     pivotMoved           = pyqtSignal(float, float)
+    panPerformed         = pyqtSignal()
 
     MODE_PLACE = "place"
     MODE_EDIT  = "edit"
@@ -339,6 +379,8 @@ class VideoCanvas(QWidget):
         self._pivot_ny          = 0.5
         self._show_pivot        = False
         self._dragging_pivot    = False
+        self._space_pan_active  = False 
+        self._pan_emitted       = False   
 
     # ── public ───────────────────────────────────────────────────────────
     def set_mode(self, mode):
@@ -360,6 +402,14 @@ class VideoCanvas(QWidget):
         self.update()
 
     def reset_zoom(self): self._zoom = 1.0; self._pan = QPointF(0.0, 0.0); self.update()
+
+    def set_space_pan(self, active):
+        self._space_pan_active = active
+        if active:
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
+        else:
+            self.setCursor(Qt.CursorShape.CrossCursor if self._mode == self.MODE_PLACE
+                           else Qt.CursorShape.ArrowCursor)
 
     def set_pivot_visible(self, visible): self._show_pivot = visible; self.update()
     def set_pivot(self, nx, ny): self._pivot_nx = nx; self._pivot_ny = ny; self.update()
@@ -578,11 +628,13 @@ class VideoCanvas(QWidget):
     def mousePressEvent(self, e):
         if not self._pixmap_raw: return
         wx, wy = e.position().x(), e.position().y()
-        if e.button() == Qt.MouseButton.MiddleButton or (
-                e.button() == Qt.MouseButton.LeftButton and
-                e.modifiers() & Qt.KeyboardModifier.ShiftModifier):
+        if (e.button() == Qt.MouseButton.MiddleButton or
+                self._space_pan_active or
+                (e.button() == Qt.MouseButton.LeftButton and
+                 e.modifiers() & Qt.KeyboardModifier.ShiftModifier)):
             self._drag_action = 'pan'; self._drag_start_w = e.position()
             self._pan_at_drag_start = QPointF(self._pan)
+            self._pan_emitted = False
             self.setCursor(Qt.CursorShape.ClosedHandCursor); return
         if (self._mode == self.MODE_EDIT and
                 e.button() == Qt.MouseButton.LeftButton and self._hit_pivot(wx, wy)):
@@ -618,8 +670,12 @@ class VideoCanvas(QWidget):
             self.pivotMoved.emit(nx, ny); self.update(); return
         if self._drag_action == 'pan':
             self._pan = self._pan_at_drag_start + (e.position() - self._drag_start_w)
-            self.update(); return
-        if self._drag_action == 'move' and self._drag_pid is not None:
+            if not self._pan_emitted:
+                moved = e.position() - self._drag_start_w
+                if abs(moved.x()) > 3 or abs(moved.y()) > 3:
+                    self._pan_emitted = True
+                    self.panPerformed.emit()
+            self.update(); return        if self._drag_action == 'move' and self._drag_pid is not None:
             nx, ny = self._canvas_to_img(wx, wy)
             self.pointMoved.emit(self._drag_pid, nx, ny); return
         if self._drag_action in ('feat', 'srch') and self._drag_pid is not None:
@@ -646,8 +702,11 @@ class VideoCanvas(QWidget):
             self._dragging_pivot = False
             self.setCursor(Qt.CursorShape.ArrowCursor); return
         if e.button() == Qt.MouseButton.MiddleButton or self._drag_action == 'pan':
-            self.setCursor(Qt.CursorShape.CrossCursor if self._mode == self.MODE_PLACE
-                           else Qt.CursorShape.ArrowCursor)
+            if self._space_pan_active:
+                self.setCursor(Qt.CursorShape.OpenHandCursor)
+            else:
+                self.setCursor(Qt.CursorShape.CrossCursor if self._mode == self.MODE_PLACE
+                               else Qt.CursorShape.ArrowCursor)
         self._drag_action = None; self._drag_pid = None
 
 
@@ -1537,20 +1596,37 @@ class ExportWorker(QObject):
                 if _ACTIVATION_MODE == "trial":
                     from PIL import Image, ImageDraw, ImageFont
 
+                    text        = "FOCALFLOW"
+                    target_size = int(fw / 12)
+
                     pil_mask = Image.new("L", (fw, fh), 0)
                     draw     = ImageDraw.Draw(pil_mask)
-                    try:
-                        font = ImageFont.truetype("arial.ttf", size=int(fw / 12))
-                    except:
-                        font = ImageFont.load_default()
 
-                    text = "FOCALFLOW"
-                    bbox = draw.textbbox((0, 0), text, font=font)
-                    tw   = bbox[2] - bbox[0]
-                    th   = bbox[3] - bbox[1]
-                    tx   = (fw - tw) // 2
-                    ty   = (fh - th) // 2
-                    draw.text((tx, ty), text, fill=255, font=font)
+                    font = _load_watermark_font(target_size)
+                    if font is not None:
+                        bbox = draw.textbbox((0, 0), text, font=font)
+                        tw   = bbox[2] - bbox[0]
+                        th   = bbox[3] - bbox[1]
+                        tx   = (fw - tw) // 2
+                        ty   = (fh - th) // 2
+                        draw.text((tx, ty), text, fill=255, font=font)
+                    else:
+                        # No usable truetype font on this system — render with
+                        # PIL's tiny built-in bitmap font, then scale it up so
+                        # it's still visible on a large frame instead of
+                        # silently rendering a few near-invisible pixels.
+                        fallback_font = ImageFont.load_default()
+                        tmp = Image.new("L", (1, 1), 0)
+                        tdraw = ImageDraw.Draw(tmp)
+                        bbox = tdraw.textbbox((0, 0), text, font=fallback_font)
+                        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                        small = Image.new("L", (tw + 4, th + 4), 0)
+                        ImageDraw.Draw(small).text((2, 2), text, fill=255, font=fallback_font)
+                        scale = max(1, int(target_size / max(th, 1)))
+                        big = small.resize((small.width * scale, small.height * scale), Image.NEAREST)
+                        tx = (fw - big.width) // 2
+                        ty = (fh - big.height) // 2
+                        pil_mask.paste(big, (max(0, tx), max(0, ty)))
 
                     mask  = np.array(pil_mask).astype(np.float32) / 255.0
                     dtype = y_out.dtype
@@ -2005,6 +2081,8 @@ class FocalMainWindow(QMainWindow):
         self._resolve_timeline_in = None
         self._resolve_track       = None
         self._prefs               = load_prefs()
+        self._space_down          = False   
+        self._space_pan_used      = False   
         self._stab_matrices = []
         self._stab_matrix_params = []
 
@@ -2269,6 +2347,7 @@ class FocalMainWindow(QMainWindow):
         self.canvas.trackerTypeToggled.connect(self._on_tracker_type_toggled_canvas)
         self.canvas.pointRadiusChanged.connect(self._on_canvas_radius_changed)
         self.canvas.pivotMoved.connect(self._on_pivot_moved)
+        self.canvas.panPerformed.connect(lambda: setattr(self, '_space_pan_used', True))
         lay.addWidget(self.canvas)
         self.zoom_reset_btn.clicked.connect(self.canvas.reset_zoom)
         lay.addWidget(self._build_transport())
@@ -2338,6 +2417,7 @@ class FocalMainWindow(QMainWindow):
 
     def _build_menu(self):
         mb = self.menuBar()
+        mb.setNativeMenuBar(False) 
         fm = mb.addMenu("File")
         for lbl, sc, fn in [
             ("Open…",      "Ctrl+O", self.open_file),
@@ -2854,9 +2934,10 @@ class FocalMainWindow(QMainWindow):
             with open(json_out, "w") as f: json.dump(json_meta, f, indent=2)
         except Exception: pass
         try:
-            pointer = os.path.join(_HERE, "focal_last_result.txt")
+            pointer = os.path.join(_SHARED_DIR, "focal_last_result.txt")
             with open(pointer, "w") as f: f.write(f"{json_out}\n{self._video_path}")
-        except Exception: pass
+        except Exception as _ptr_ex:
+            _log(f"Failed to write pointer file: {_ptr_ex}")
 
         self.status_label.setText(
             f"✓ Saved → {out_name}.{ext}  |  Run place_result in Resolve.")
@@ -3272,7 +3353,12 @@ class FocalMainWindow(QMainWindow):
 
         if raw == Qt.Key.Key_Left:  self._prev_frame(); return
         if raw == Qt.Key.Key_Right: self._next_frame(); return
-        if raw == Qt.Key.Key_Space: self._toggle_play(); return
+        if raw == Qt.Key.Key_Space:
+            if not e.isAutoRepeat() and not self._space_down:
+                self._space_down = True
+                self._space_pan_used = False
+                self.canvas.set_space_pan(True)
+            return
         if raw == Qt.Key.Key_H:     self._toggle_hide_all(); return
 
         if raw == Qt.Key.Key_A:
@@ -3303,6 +3389,16 @@ class FocalMainWindow(QMainWindow):
             self._show_frame(self._in_frame); self.scrub.setValue(self._in_frame)
         else:
             super().keyPressEvent(e)
+
+    def keyReleaseEvent(self, e):
+        if e.key() == Qt.Key.Key_Space and not e.isAutoRepeat():
+            was_pan = self._space_pan_used
+            self._space_down = False
+            self.canvas.set_space_pan(False)
+            if not was_pan:
+                self._toggle_play()
+            return
+        super().keyReleaseEvent(e)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

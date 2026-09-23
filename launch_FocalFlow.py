@@ -18,7 +18,8 @@ if not FOCAL_DIR or not PYTHON_PATH:
 
 LOG = os.path.join(FOCAL_DIR, "FocalFlow", "focal_launch_log.txt")
 os.makedirs(os.path.dirname(LOG), exist_ok=True)
-SPLASH_PATH = os.path.join(FOCAL_DIR, "splash_FocalFlow")
+SPLASH_PATH = os.path.join(FOCAL_DIR, "splash_FocalFlow.app",
+                            "Contents", "MacOS", "splash_FocalFlow")
 
 try:
     if "resolve" not in dir():
@@ -76,6 +77,8 @@ try:
         raise RuntimeError(f"FocalFlow not found at:\n{FOCAL_PATH}")
     if not os.path.isfile(PYTHON_PATH):
         raise RuntimeError(f"Python not found at:\n{PYTHON_PATH}")
+    if not os.path.isfile(SPLASH_PATH):
+        raise RuntimeError(f"Splash launcher not found at:\n{SPLASH_PATH}")
 
     with open(LOG, "w") as f:
         f.write(f"Clip      : {os.path.basename(file_path)}\n")

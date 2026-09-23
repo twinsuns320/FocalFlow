@@ -8,6 +8,11 @@ on:
       - 'license.py'
       - 'focal_paths.py'
       - 'build_mac.sh'
+      - 'install_mac.py'
+      - 'settings_app.py'
+      - 'settings_FocalFlow.py'
+      - 'launch_FocalFlow.py'
+      - 'place_result_FocalFlow.py'
       - '.github/workflows/build-mac.yml'
   workflow_dispatch:
 
@@ -72,9 +77,10 @@ jobs:
           cp install_FocalFlow.command package/
           cp dist_upgrade/upgrade_FocalFlow package/
           cp upgrade_FocalFlow.command package/
-          cp dist_splash/splash_FocalFlow package/
-          chmod +x package/splash_FocalFlow
+          cp -R dist_splash/splash_FocalFlow.app package/
           cp focal_paths.py package/
+          cp -R dist_settings/Settings_FocalFlow.app package/
+          cp settings_FocalFlow.py package/
           cp launch_FocalFlow.py package/
           cp place_result_FocalFlow.py package/
           cp settings_FocalFlow.py package/
@@ -158,9 +164,10 @@ jobs:
           cp install_FocalFlow.command package/
           cp dist_upgrade/upgrade_FocalFlow package/
           cp upgrade_FocalFlow.command package/
-          cp dist_splash/splash_FocalFlow package/
-          chmod +x package/splash_FocalFlow
+          cp -R dist_splash/splash_FocalFlow.app package/
           cp focal_paths.py package/
+          cp -R dist_settings/Settings_FocalFlow.app package/
+          cp settings_FocalFlow.py package/
           cp launch_FocalFlow.py package/
           cp place_result_FocalFlow.py package/
           cp settings_FocalFlow.py package/

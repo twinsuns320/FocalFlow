@@ -263,19 +263,34 @@ def main():
     print("  Done.")
 
     print("  Copying splash screen...")
-    splash_src = os.path.join(here, "splash_FocalFlow")
-    if os.path.isfile(splash_src):
-        splash_dst = os.path.join(install_dir, "splash_FocalFlow")
-        shutil.copy2(splash_src, splash_dst)
-        os.chmod(splash_dst, 0o755)
+    splash_src = os.path.join(here, "splash_FocalFlow.app")
+    if os.path.isdir(splash_src):
+        splash_dst = os.path.join(install_dir, "splash_FocalFlow.app")
+        if os.path.isdir(splash_dst):
+            shutil.rmtree(splash_dst)
+        shutil.copytree(splash_src, splash_dst)
         try:
-            subprocess.run(["xattr", "-d", "com.apple.quarantine", splash_dst],
-                            capture_output=True)
+            subprocess.run(["xattr", "-cr", splash_dst], capture_output=True)
         except Exception:
             pass
         print("  Done.")
     else:
-        print(f"  WARNING: splash_FocalFlow not found at {splash_src}")
+        print(f"  WARNING: splash_FocalFlow.app not found at {splash_src}")
+
+    print("  Copying settings app...")
+    settings_src = os.path.join(here, "Settings_FocalFlow.app")
+    if os.path.isdir(settings_src):
+        settings_dst = os.path.join(install_dir, "Settings_FocalFlow.app")
+        if os.path.isdir(settings_dst):
+            shutil.rmtree(settings_dst)
+        shutil.copytree(settings_src, settings_dst)
+        try:
+            subprocess.run(["xattr", "-cr", settings_dst], capture_output=True)
+        except Exception:
+            pass
+        print("  Done.")
+    else:
+        print(f"  WARNING: Settings_FocalFlow.app not found at {settings_src}")
 
     macos_dir = os.path.join(app_dst, "Contents", "MacOS")
 
