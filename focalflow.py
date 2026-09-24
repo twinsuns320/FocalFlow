@@ -675,7 +675,8 @@ class VideoCanvas(QWidget):
                 if abs(moved.x()) > 3 or abs(moved.y()) > 3:
                     self._pan_emitted = True
                     self.panPerformed.emit()
-            self.update(); return        if self._drag_action == 'move' and self._drag_pid is not None:
+            self.update(); return
+        if self._drag_action == 'move' and self._drag_pid is not None:
             nx, ny = self._canvas_to_img(wx, wy)
             self.pointMoved.emit(self._drag_pid, nx, ny); return
         if self._drag_action in ('feat', 'srch') and self._drag_pid is not None:
