@@ -1,7 +1,7 @@
 # FocalFlow
 
 ## PLEASE WATCH
-Watch this to make sure you understand the few steps to isntall FocalFlow correctly and smoothly
+Watch this to make sure you understand the few steps to install FocalFlow correctly and smoothly
 
 ## Windows
 [Download for Windows](https://github.com/twinsuns320/FocalFlow/releases/latest/download/FocalFlow_windows.zip)
