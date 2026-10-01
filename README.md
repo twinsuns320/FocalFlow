@@ -7,7 +7,7 @@
 Open Terminal, paste this, and press Enter:
 
 ```
-cd ~/Downloads && curl -fL "https://github.com/twinsuns320/FocalFlow/releases/latest/download/FocalFlow_$(uname -m).zip" -o FocalFlow.zip && rm -rf FocalFlow && ditto -x -k FocalFlow.zip /tmp/ff_$$ 2>/dev/null || unzip -q -o FocalFlow.zip -d /tmp/ff_$$; rm FocalFlow.zip && mv "$(find /tmp/ff_$$ -mindepth 1 -maxdepth 1)" FocalFlow && rm -rf /tmp/ff_$$ && open FocalFlow
+cd ~/Downloads && curl -fL "https://github.com/twinsuns320/FocalFlow/releases/latest/download/FocalFlow_$(uname -m).zip" -o FocalFlow.zip && open -W -a "Archive Utility" FocalFlow.zip && rm FocalFlow.zip && open FocalFlow
 ```
 
 ## Free Trial
