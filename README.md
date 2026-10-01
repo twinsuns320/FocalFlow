@@ -1,5 +1,7 @@
 # FocalFlow
 
+## PLEASE WATCH INSTALL VIDEO (so that you know how to make it all go smoothly)
+
 ## Windows
 [Download for Windows](https://github.com/twinsuns320/FocalFlow/releases/latest/download/FocalFlow_windows.zip)
 
